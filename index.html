@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 MP3 Combiner - 음성 파일 병합</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎵 MP3 Combiner</h1>
+            <p class="subtitle">여러 음성 파일을 하나로 합치기</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Upload Section -->
+            <section class="upload-section" id="uploadSection">
+                <!-- Drop Zone -->
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-content">
+                        <span class="drop-zone-icon">📁</span>
+                        <p class="drop-zone-text">파일을 드래그하거나 클릭하여 업로드</p>
+                        <p class="drop-zone-formats">지원 형식: MP3, WAV, OGG, M4A, FLAC</p>
+                        <input type="file" id="fileInput" multiple accept=".mp3,.wav,.ogg,.m4a,.flac,audio/*" hidden>
+                    </div>
+                </div>
+
+                <!-- File List -->
+                <div class="file-list-section" id="fileListSection" style="display: none;">
+                    <div class="file-list-header">
+                        <h2>📋 업로드된 파일 목록</h2>
+                        <button class="btn btn-text" id="clearAllBtn">전체 삭제</button>
+                    </div>
+                    <div class="file-list" id="fileList">
+                        <!-- File items will be dynamically added here -->
+                    </div>
+                    <div class="file-list-info">
+                        <span id="fileCount">0개 파일</span>
+                        <span id="totalDuration">총 재생시간: 0:00</span>
+                    </div>
+                </div>
+
+                <!-- Options Section -->
+                <div class="options-section" id="optionsSection" style="display: none;">
+                    <h3>⚙️ 옵션</h3>
+                    <div class="options-grid">
+                        <div class="option-item">
+                            <label for="outputFormat">출력 형식</label>
+                            <select id="outputFormat">
+                                <option value="mp3" selected>MP3</option>
+                                <option value="wav">WAV</option>
+                            </select>
+                        </div>
+                        <div class="option-item">
+                            <label for="outputQuality">품질</label>
+                            <select id="outputQuality">
+                                <option value="128">128 kbps</option>
+                                <option value="192" selected>192 kbps</option>
+                                <option value="320">320 kbps</option>
+                            </select>
+                        </div>
+                        <div class="option-item">
+                            <label for="gapDuration">파일 간 간격</label>
+                            <select id="gapDuration">
+                                <option value="0" selected>0초</option>
+                                <option value="0.5">0.5초</option>
+                                <option value="1">1초</option>
+                                <option value="1.5">1.5초</option>
+                                <option value="2">2초</option>
+                                <option value="3">3초</option>
+                                <option value="5">5초</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Combine Button -->
+                <div class="combine-section" id="combineSection" style="display: none;">
+                    <button class="btn btn-primary btn-large" id="combineBtn">
+                        🔗 파일 합치기
+                    </button>
+                </div>
+            </section>
+
+            <!-- Processing Section -->
+            <section class="processing-section" id="processingSection" style="display: none;">
+                <div class="processing-content">
+                    <div class="spinner"></div>
+                    <h2>파일 병합 중...</h2>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">0% 완료</p>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section class="result-section" id="resultSection" style="display: none;">
+                <div class="result-header">
+                    <span class="result-icon">✅</span>
+                    <h2>병합 완료!</h2>
+                </div>
+
+                <!-- Audio Player -->
+                <div class="audio-player-container">
+                    <div class="audio-filename" id="resultFilename">🎵 combined_audio.mp3</div>
+                    <div class="audio-player">
+                        <button class="play-btn" id="playBtn">▶️</button>
+                        <div class="audio-progress-container" id="audioProgressContainer">
+                            <div class="audio-progress" id="audioProgress"></div>
+                        </div>
+                        <div class="audio-time">
+                            <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+                        </div>
+                        <div class="volume-control">
+                            <span class="volume-icon" id="volumeIcon">🔊</span>
+                            <input type="range" id="volumeSlider" min="0" max="100" value="100">
+                        </div>
+                    </div>
+                    <audio id="audioElement" hidden></audio>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="result-actions">
+                    <button class="btn btn-primary" id="downloadBtn">📥 다운로드</button>
+                    <button class="btn btn-secondary" id="newCombineBtn">🔄 새로 시작</button>
+                </div>
+
+                <!-- Combine Info -->
+                <div class="combine-info">
+                    <h3>📊 병합 정보</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">총 파일 수</span>
+                            <span class="info-value" id="infoFileCount">0개</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">총 재생 시간</span>
+                            <span class="info-value" id="infoTotalDuration">0:00</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">파일 크기</span>
+                            <span class="info-value" id="infoFileSize">0 MB</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">출력 형식</span>
+                            <span class="info-value" id="infoFormat">MP3 (192kbps)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notification -->
+        <div class="toast" id="toast">
+            <span class="toast-message" id="toastMessage"></span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="js/audio-processor.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
