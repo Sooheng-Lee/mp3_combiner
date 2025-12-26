@@ -393,6 +393,167 @@ class AudioProcessor {
             this.combinedBlob = null;
         }
     }
+
+    /**
+     * 단일 오디오 파일을 다른 형식으로 변환
+     * @param {File} file - 변환할 오디오 파일
+     * @param {string} targetFormat - 대상 형식 ('mp3', 'wav', 'ogg')
+     * @param {number} bitrate - 비트레이트 (kbps)
+     * @param {number} sampleRate - 샘플레이트 (Hz)
+     * @returns {Promise<{blob: Blob, duration: number}>}
+     */
+    async convertFile(file, targetFormat = 'mp3', bitrate = 192, sampleRate = 44100) {
+        // 파일 읽기 및 디코딩
+        const arrayBuffer = await this.readFileAsArrayBuffer(file);
+        const audioBuffer = await this.decodeAudioData(arrayBuffer);
+        
+        // 샘플레이트가 다른 경우 리샘플링
+        let processedBuffer = audioBuffer;
+        if (audioBuffer.sampleRate !== sampleRate) {
+            processedBuffer = await this.resampleBuffer(audioBuffer, sampleRate);
+        }
+        
+        // WAV로 변환
+        const wavBlob = this.audioBufferToWavWithSampleRate(processedBuffer, sampleRate);
+        
+        let outputBlob;
+        
+        // 대상 형식으로 변환
+        if (targetFormat === 'wav') {
+            outputBlob = wavBlob;
+        } else if (targetFormat === 'mp3') {
+            outputBlob = await this.wavToMp3(wavBlob, bitrate);
+        } else if (targetFormat === 'ogg') {
+            // OGG 변환은 브라우저 지원 한계로 WAV로 대체
+            outputBlob = wavBlob;
+            console.warn('OGG encoding not supported, using WAV');
+        } else {
+            outputBlob = wavBlob;
+        }
+        
+        return {
+            blob: outputBlob,
+            duration: processedBuffer.duration
+        };
+    }
+
+    /**
+     * 여러 파일을 일괄 변환
+     * @param {File[]} files - 변환할 파일 배열
+     * @param {string} targetFormat - 대상 형식
+     * @param {number} bitrate - 비트레이트
+     * @param {number} sampleRate - 샘플레이트
+     * @param {Function} onProgress - 진행률 콜백
+     * @returns {Promise<Array<{originalName: string, blob: Blob, duration: number}>>}
+     */
+    async convertFiles(files, targetFormat = 'mp3', bitrate = 192, sampleRate = 44100, onProgress = () => {}) {
+        const results = [];
+        const total = files.length;
+        
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            try {
+                const result = await this.convertFile(file, targetFormat, bitrate, sampleRate);
+                
+                // 새 파일명 생성
+                const originalName = file.name.replace(/\.[^/.]+$/, '');
+                const newFilename = `${originalName}.${targetFormat}`;
+                
+                results.push({
+                    originalName: file.name,
+                    newFilename: newFilename,
+                    blob: result.blob,
+                    duration: result.duration,
+                    size: result.blob.size
+                });
+            } catch (error) {
+                console.error(`Error converting ${file.name}:`, error);
+                results.push({
+                    originalName: file.name,
+                    error: error.message
+                });
+            }
+            
+            onProgress(((i + 1) / total) * 100);
+        }
+        
+        return results;
+    }
+
+    /**
+     * AudioBuffer를 지정된 샘플레이트로 리샘플링
+     * @param {AudioBuffer} audioBuffer - 원본 오디오 버퍼
+     * @param {number} targetSampleRate - 목표 샘플레이트
+     * @returns {Promise<AudioBuffer>}
+     */
+    async resampleBuffer(audioBuffer, targetSampleRate) {
+        // 오프라인 오디오 컨텍스트를 사용한 리샘플링
+        const duration = audioBuffer.duration;
+        const newLength = Math.ceil(duration * targetSampleRate);
+        
+        const offlineContext = new OfflineAudioContext(
+            audioBuffer.numberOfChannels,
+            newLength,
+            targetSampleRate
+        );
+        
+        const source = offlineContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(offlineContext.destination);
+        source.start(0);
+        
+        return await offlineContext.startRendering();
+    }
+
+    /**
+     * AudioBuffer를 지정된 샘플레이트의 WAV Blob으로 변환
+     * @param {AudioBuffer} audioBuffer - 오디오 버퍼
+     * @param {number} sampleRate - 샘플레이트
+     * @returns {Blob}
+     */
+    audioBufferToWavWithSampleRate(audioBuffer, sampleRate) {
+        const numOfChannels = audioBuffer.numberOfChannels;
+        const format = 1; // PCM
+        const bitDepth = 16;
+        
+        const bytesPerSample = bitDepth / 8;
+        const blockAlign = numOfChannels * bytesPerSample;
+        
+        const buffer = audioBuffer;
+        const length = buffer.length * blockAlign;
+        const arrayBuffer = new ArrayBuffer(44 + length);
+        const view = new DataView(arrayBuffer);
+        
+        // WAV 헤더 작성
+        this.writeString(view, 0, 'RIFF');
+        view.setUint32(4, 36 + length, true);
+        this.writeString(view, 8, 'WAVE');
+        this.writeString(view, 12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, format, true);
+        view.setUint16(22, numOfChannels, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * blockAlign, true);
+        view.setUint16(32, blockAlign, true);
+        view.setUint16(34, bitDepth, true);
+        this.writeString(view, 36, 'data');
+        view.setUint32(40, length, true);
+        
+        // 오디오 데이터 작성
+        let offset = 44;
+        for (let i = 0; i < buffer.length; i++) {
+            for (let channel = 0; channel < numOfChannels; channel++) {
+                let sample = buffer.getChannelData(channel)[i];
+                sample = Math.max(-1, Math.min(1, sample));
+                sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+                view.setInt16(offset, sample, true);
+                offset += 2;
+            }
+        }
+        
+        return new Blob([arrayBuffer], { type: 'audio/wav' });
+    }
 }
 
 // 전역으로 내보내기

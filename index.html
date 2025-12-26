@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎵 MP3 Combiner - 음성 파일 병합</title>
+    <title>🎵 Audio Tools - 음성 파일 병합 및 변환</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,12 +13,28 @@
     <div class="container">
         <!-- Header -->
         <header class="header">
-            <h1>🎵 MP3 Combiner</h1>
-            <p class="subtitle">여러 음성 파일을 하나로 합치기</p>
+            <h1>🎵 Audio Tools</h1>
+            <p class="subtitle">음성 파일 병합 및 변환 도구</p>
         </header>
+
+        <!-- Menu Navigation -->
+        <nav class="menu-nav">
+            <button class="menu-btn active" data-menu="combiner">
+                <span class="menu-icon">🔗</span>
+                <span class="menu-text">Combiner</span>
+                <span class="menu-desc">파일 합치기</span>
+            </button>
+            <button class="menu-btn" data-menu="converter">
+                <span class="menu-icon">🔄</span>
+                <span class="menu-text">Converter</span>
+                <span class="menu-desc">포맷 변환</span>
+            </button>
+        </nav>
 
         <!-- Main Content -->
         <main class="main-content" id="mainContent">
+            <!-- ==================== COMBINER SECTION ==================== -->
+            <div class="tool-section" id="combinerSection">
             <!-- Upload Section -->
             <section class="upload-section" id="uploadSection">
                 <!-- Drop Zone -->
@@ -155,6 +171,131 @@
                     </div>
                 </div>
             </section>
+            </div>
+            <!-- ==================== END COMBINER SECTION ==================== -->
+
+            <!-- ==================== CONVERTER SECTION ==================== -->
+            <div class="tool-section" id="converterSection" style="display: none;">
+                <!-- Converter Upload Section -->
+                <section class="upload-section" id="converterUploadSection">
+                    <!-- Drop Zone -->
+                    <div class="drop-zone" id="converterDropZone">
+                        <div class="drop-zone-content">
+                            <span class="drop-zone-icon">🔄</span>
+                            <p class="drop-zone-text">변환할 파일을 드래그하거나 클릭하여 업로드</p>
+                            <p class="drop-zone-formats">지원 형식: MP3, WAV, OGG, M4A, FLAC</p>
+                            <input type="file" id="converterFileInput" multiple accept=".mp3,.wav,.ogg,.m4a,.flac,audio/*" hidden>
+                        </div>
+                    </div>
+
+                    <!-- Converter File List -->
+                    <div class="file-list-section" id="converterFileListSection" style="display: none;">
+                        <div class="file-list-header">
+                            <h2>📋 변환할 파일 목록</h2>
+                            <button class="btn btn-text" id="converterClearAllBtn">전체 삭제</button>
+                        </div>
+                        <div class="file-list" id="converterFileList">
+                            <!-- File items will be dynamically added here -->
+                        </div>
+                        <div class="file-list-info">
+                            <span id="converterFileCount">0개 파일</span>
+                            <span id="converterTotalDuration">총 재생시간: 0:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Converter Options Section -->
+                    <div class="options-section" id="converterOptionsSection" style="display: none;">
+                        <h3>⚙️ 변환 옵션</h3>
+                        <div class="options-grid">
+                            <div class="option-item">
+                                <label for="converterOutputFormat">출력 형식</label>
+                                <select id="converterOutputFormat">
+                                    <option value="mp3" selected>MP3</option>
+                                    <option value="wav">WAV</option>
+                                    <option value="ogg">OGG</option>
+                                </select>
+                            </div>
+                            <div class="option-item">
+                                <label for="converterOutputQuality">품질</label>
+                                <select id="converterOutputQuality">
+                                    <option value="128">128 kbps</option>
+                                    <option value="192" selected>192 kbps</option>
+                                    <option value="320">320 kbps</option>
+                                </select>
+                            </div>
+                            <div class="option-item">
+                                <label for="converterSampleRate">샘플레이트</label>
+                                <select id="converterSampleRate">
+                                    <option value="44100" selected>44.1 kHz</option>
+                                    <option value="48000">48 kHz</option>
+                                    <option value="22050">22.05 kHz</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Convert Button -->
+                    <div class="combine-section" id="convertButtonSection" style="display: none;">
+                        <button class="btn btn-primary btn-large" id="convertBtn">
+                            🔄 파일 변환하기
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Converter Processing Section -->
+                <section class="processing-section" id="converterProcessingSection" style="display: none;">
+                    <div class="processing-content">
+                        <div class="spinner"></div>
+                        <h2>파일 변환 중...</h2>
+                        <div class="progress-container">
+                            <div class="progress-bar" id="converterProgressBar"></div>
+                        </div>
+                        <p class="progress-text" id="converterProgressText">0% 완료</p>
+                    </div>
+                </section>
+
+                <!-- Converter Result Section -->
+                <section class="result-section" id="converterResultSection" style="display: none;">
+                    <div class="result-header">
+                        <span class="result-icon">✅</span>
+                        <h2>변환 완료!</h2>
+                    </div>
+
+                    <!-- Converted Files List -->
+                    <div class="converted-files-container">
+                        <h3>📁 변환된 파일</h3>
+                        <div class="converted-files-list" id="convertedFilesList">
+                            <!-- Converted file items will be dynamically added here -->
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="result-actions">
+                        <button class="btn btn-primary" id="downloadAllConvertedBtn">📥 전체 다운로드</button>
+                        <button class="btn btn-secondary" id="newConvertBtn">🔄 새로 시작</button>
+                    </div>
+
+                    <!-- Converter Info -->
+                    <div class="combine-info">
+                        <h3>📊 변환 정보</h3>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <span class="info-label">변환된 파일 수</span>
+                                <span class="info-value" id="converterInfoFileCount">0개</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">출력 형식</span>
+                                <span class="info-value" id="converterInfoFormat">MP3 (192kbps)</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">총 파일 크기</span>
+                                <span class="info-value" id="converterInfoTotalSize">0 MB</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- ==================== END CONVERTER SECTION ==================== -->
         </main>
 
         <!-- Toast Notification -->
